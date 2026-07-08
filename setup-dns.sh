@@ -82,6 +82,13 @@ if [ -f /etc/bind/named.conf.options ]; then
         sudo sed -i '/^options {/a\    listen-on { 127.0.0.1; };' /etc/bind/named.conf.options
     fi
 
+    # Debian can ship named.conf.options without any IPv6 listen directive.
+    # In that case, BIND defaults to listening on all IPv6 interfaces,
+    # which prevents nsd from binding UDP/53 on ::.
+    if ! sudo grep -q 'listen-on-v6' /etc/bind/named.conf.options 2>/dev/null; then
+        sudo sed -i '/listen-on {/a\    listen-on-v6 { ::1; };' /etc/bind/named.conf.options 2>/dev/null || true
+    fi
+
     sudo sed -i 's/listen-on-v6 { any; };/listen-on-v6 { ::1; };/' /etc/bind/named.conf.options 2>/dev/null || true
 fi
 
@@ -113,8 +120,9 @@ for ip in $PRIVATE_IP $PRIVATE_IPV6; do
 done
 echo 'include: "/etc/nsd/nsd.conf.d/*.conf"' >>/etc/nsd/nsd.conf
 
-systemctl stop nsd
-systemctl stop named
+systemctl stop nsd || true
+systemctl stop named || true
+systemctl stop bind9 || true
 systemctl enable --now nsd
 systemctl enable --now named
 
