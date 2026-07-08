@@ -1,0 +1,56 @@
+name: Build & publish MIAD image (GHCR)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine MIAB version tag
+        id: miab
+        shell: bash
+        run: |
+          # Read the default MIAB_TAG from our installer script.
+          # Expected format: MIAB_TAG="${MIAB_TAG:-v76}"
+          MIAB_VERSION="$(sed -n 's/^MIAB_TAG=".*:-\(v[0-9][0-9]*\)}"$/\1/p' bin-container/install.sh)"
+          if [ -z "$MIAB_VERSION" ]; then
+            echo "Failed to parse MIAB_VERSION from bin-container/install.sh" >&2
+            exit 1
+          fi
+
+          MIAB_VERSION_SHORT="${MIAB_VERSION#v}"
+          echo "miab_version=$MIAB_VERSION" >> "$GITHUB_OUTPUT"
+          echo "miab_version_short=$MIAB_VERSION_SHORT" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mail-in-a-docker:latest
+            ghcr.io/${{ github.repository_owner }}/mail-in-a-docker:${{ steps.miab.outputs.miab_version_short }}
+            ghcr.io/${{ github.repository_owner }}/mail-in-a-docker:${{ steps.miab.outputs.miab_version }}
+            ghcr.io/${{ github.repository_owner }}/mail-in-a-docker:${{ github.sha }}
+
