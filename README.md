@@ -74,6 +74,18 @@ Please ensure you are running the official docker by running `setup-official-doc
 ./create.sh
 ```
 
+The default `docker-compose.yaml` now pulls the prebuilt GHCR image instead of building locally:
+
+```BASH
+ghcr.io/thibautdlct/mail-in-a-docker:${MIAB_TAG:-v76}
+```
+
+You can override the Mail-in-a-Box image tag used by docker compose by setting `MIAB_TAG`:
+
+```BASH
+MIAB_TAG=v76 docker compose up -d
+```
+
 #### Options
 
 The first `./create.sh <primary-hostname>` run provisions Mail-in-a-Box inside the container.

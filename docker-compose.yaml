@@ -2,7 +2,7 @@ services:
   ubuntu:
     container_name: miad
     hostname: your-domain.com
-    build: .
+    image: ghcr.io/thibautdlct/mail-in-a-docker:${MIAB_TAG:-v76}
     tty: true
     volumes:
       - ./data:/home/user-data:rw
