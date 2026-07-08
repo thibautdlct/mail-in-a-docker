@@ -22,17 +22,41 @@ fi
 # exit 0
 
 sudo systemctl enable --now ssh
-hostname $1
+HOSTNAME="${1:?Usage: $0 <primary-hostname>}"
+FORCE=0
+shift
+for arg in "$@"; do
+  if [ "${arg}" = "--force" ]; then
+    FORCE=1
+  fi
+done
+
+hostname "${HOSTNAME}"
 
 # enable ipv6 for nsd to start properly
 sudo git clone https://github.com/mail-in-a-box/mailinabox
 
 cd mailinabox
-git checkout v68
+MIAB_TAG="${MIAB_TAG:-v76}"
+echo "- Installing Mail-in-a-Box tag: ${MIAB_TAG}"
+git checkout "${MIAB_TAG}"
+
+MARKER="/home/user-data/.miab_installed_${HOSTNAME}_${MIAB_TAG}"
+if [ -f "${MARKER}" ]; then
+  if [ "${FORCE}" -eq 0 ]; then
+    echo "[install] MIAB already installed for ${HOSTNAME} (${MIAB_TAG}). Skipping setup/start."
+    exit 0
+  else
+    echo "[install] --force given; removing marker ${MARKER} and re-running setup/start."
+    rm -f "${MARKER}" || true
+  fi
+fi
 
 ## START: Before install
 
-/home/user-data/before-install.sh
+if [ -x /home/user-data/before-install.sh ]; then
+  /home/user-data/before-install.sh
+fi
 
 sed -i "s/-u bind /-u root /" /mailinabox/setup/system.sh
 sed -i "s/SSH_PORT=/SSH_PORT=22\#/" /mailinabox/setup/system.sh
@@ -47,10 +71,6 @@ sed -i "s/PHP_VER=8.0/PHP_VER=8.1;DISABLE_FIREWALL=0/" /mailinabox/setup/functio
 sed -i "s/php8.0-fpm/php8.1-fpm/" /mailinabox/conf/nginx-top.conf
 sed -i "s/php8.0-fpm/php8.1-fpm/" /mailinabox/tools/owncloud-restore.sh
 sed -i "s/php8.0-fpm/php8.1-fpm/" /mailinabox/management/backup.py
-
-# disable nextcloud
-echo "- Disabling nextcloud installation"
-sed -i "s/source setup\/nextcloud.sh/# source setup\/nextcloud.sh/" /mailinabox/setup/start.sh
 
 ## END: Before install
 
@@ -71,10 +91,13 @@ sed -i "s/restart_service munin-node/sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr
 ## without nsd and named
 # sed -i "s/restart_service munin-node/sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr\/lib\/systemd\/system\/spampd.service;sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr\/lib\/systemd\/system\/opendkim.service;sed -i \"s\/-xf\/-xfv\/\" \/lib\/systemd\/system\/fail2ban.service;sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr\/lib\/systemd\/system\/opendmarc.service; systemctl daemon-reload; systemctl stop named; systemctl enable --now fail2ban postfix postgrey dovecot spampd nginx php8.1-fpm mailinabox munin opendkim opendmarc spamassassin; systemctl start spampd; return/" /mailinabox/setup/munin.sh
 
-sudo setup/start.sh
+sudo -E setup/start.sh
 
 ## START: After install
-/home/user-data/after-install.sh
+if [ -x /home/user-data/after-install.sh ]; then
+  /home/user-data/after-install.sh
+fi
+sudo -n touch "${MARKER}" || touch "${MARKER}"
 ## END After install
 
 service --status-all

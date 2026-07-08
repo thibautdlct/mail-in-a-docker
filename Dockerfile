@@ -233,7 +233,6 @@ RUN rm -f /lib/systemd/system/systemd-update-utmp*
 
 COPY ./bin-container/install.sh /
 COPY ./bin-container/status-check.sh /
-COPY ./bin-container/named.conf /
 EXPOSE 25
 EXPOSE 53
 EXPOSE 80

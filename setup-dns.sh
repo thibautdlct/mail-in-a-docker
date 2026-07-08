@@ -62,6 +62,29 @@ apt -y install \
     bind9 \
     nsd
 
+# systemd-resolved may open a local DNS stub on 127.0.0.53:53.
+# Disable this stub to avoid conflicts with bind9/nsd.
+if [ -f /etc/systemd/resolved.conf ]; then
+    sudo sed -i 's/^#\?DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf || true
+    sudo systemctl restart systemd-resolved || true
+fi
+
+# nsd must be able to chdir into its zones directory.
+sudo mkdir -p /etc/nsd/zones || true
+
+# bind9 (named) is used here as a local recursive resolver.
+# Force it to listen only on loopback so it doesn't block nsd on :53.
+if [ -f /etc/bind/named.conf.options ]; then
+    # Fix possible previous broken injection (literal "\n\tlisten-on" text).
+    sudo sed -i 's/^\\n\\tlisten-on.*$/    listen-on { 127.0.0.1; };/g' /etc/bind/named.conf.options 2>/dev/null || true
+
+    if ! sudo grep -q 'listen-on {' /etc/bind/named.conf.options 2>/dev/null; then
+        sudo sed -i '/^options {/a\    listen-on { 127.0.0.1; };' /etc/bind/named.conf.options
+    fi
+
+    sudo sed -i 's/listen-on-v6 { any; };/listen-on-v6 { ::1; };/' /etc/bind/named.conf.options 2>/dev/null || true
+fi
+
 cat >/etc/nsd/nsd.conf <<'EOF'
 # Do not edit. Overwritten by Mail-in-a-Docker setup, based on Mail-in-a-Box setup.
 server:

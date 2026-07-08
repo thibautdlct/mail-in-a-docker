@@ -18,6 +18,6 @@ docker container rm miad
 # service systemd-resolved stop
 # try again as 53 is now unblocked
 # ./up.sh
-docker exec -it miad "./install.sh" "$1"
+docker exec -it miad "./install.sh" "$@"
 
 # service systemd-resolved restart

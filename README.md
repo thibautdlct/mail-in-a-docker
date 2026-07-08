@@ -8,7 +8,7 @@ None of the mail server alternatives include the very tedious work of synchroniz
 
 ## Requirements
 
-- MIAB v68 https://github.com/mail-in-a-box/mailinabox
+- MIAB v76 https://github.com/mail-in-a-box/mailinabox
 - SNIProxy https://github.com/dlundquist/sniproxy
 - BIND9 aka named
 - NSD
@@ -72,6 +72,17 @@ Please ensure you are running the official docker by running `setup-official-doc
 ```BASH
 ./setup-official-docker.sh # this command can damage your existing setup
 ./create.sh
+```
+
+#### Options
+
+The first `./create.sh <primary-hostname>` run provisions Mail-in-a-Box inside the container.
+Subsequent runs skip the provisioning step thanks to an install marker stored in the persistent `./data` volume.
+
+To re-run the provisioning even if the marker exists:
+
+```BASH
+./create.sh <primary-hostname> --force
 ```
 
 ## Other scripts
