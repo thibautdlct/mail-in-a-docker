@@ -91,6 +91,11 @@ sed -i "s/restart_service munin-node/sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr
 ## without nsd and named
 # sed -i "s/restart_service munin-node/sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr\/lib\/systemd\/system\/spampd.service;sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr\/lib\/systemd\/system\/opendkim.service;sed -i \"s\/-xf\/-xfv\/\" \/lib\/systemd\/system\/fail2ban.service;sed -i \"s\/\^PIDFile=\/\#PIDFile\/\" \/usr\/lib\/systemd\/system\/opendmarc.service; systemctl daemon-reload; systemctl stop named; systemctl enable --now fail2ban postfix postgrey dovecot spampd nginx php8.1-fpm mailinabox munin opendkim opendmarc spamassassin; systemctl start spampd; return/" /mailinabox/setup/munin.sh
 
+# Disable Nextcloud (contacts/calendar) during Mail-in-a-Box provisioning.
+# MIAB's entrypoint (`setup/start.sh`) sources `setup/nextcloud.sh` unconditionally,
+# so we comment it out before running `setup/start.sh`.
+sed -i 's/^source setup\/nextcloud\.sh$/# source setup\/nextcloud.sh/' /mailinabox/setup/start.sh || true
+
 sudo -E setup/start.sh
 
 ## START: After install
